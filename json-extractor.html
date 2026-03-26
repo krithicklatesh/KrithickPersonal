@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Extractor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e25;
+    --surface3: #21262f;
+    --border: #2a3040;
+    --border2: #353d4e;
+    --amber: #f5a623;
+    --amber-dim: #b87a1a;
+    --amber-bg: rgba(245,166,35,0.08);
+    --amber-bg2: rgba(245,166,35,0.14);
+    --green: #4ade80;
+    --green-dim: #22c55e;
+    --green-bg: rgba(74,222,128,0.08);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.08);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.08);
+    --purple: #a78bfa;
+    --muted: #4a5568;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--amber-bg2);
+    border: 1px solid var(--amber-dim);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .logo-text { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .logo-text span { color: var(--amber); }
+
+  .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 99px;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+  }
+
+  .main { display: grid; grid-template-columns: 1fr 1fr 1fr; flex: 1; height: calc(100vh - 61px); overflow: hidden; }
+
+  .panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .panel-badge {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    background: var(--amber-bg);
+    border: 1px solid var(--amber-dim);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+
+  .step-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+  .step-dot.active { background: var(--amber-bg2); border-color: var(--amber); color: var(--amber); }
+
+  .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  .input-area {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 16px;
+    resize: none;
+    caret-color: var(--amber);
+  }
+
+  .input-area::placeholder { color: var(--text3); }
+
+  .panel-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    color: var(--text2);
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { border-color: var(--amber-dim); color: var(--amber); background: var(--amber-bg); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--amber-bg2);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .btn-primary:hover { background: rgba(245,166,35,0.22); }
+
+  .btn-ghost {
+    border-color: transparent;
+    color: var(--text3);
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+  .btn-ghost:hover { color: var(--text2); background: var(--surface3); border-color: transparent; }
+
+  .btn-success {
+    background: var(--green-bg);
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+  .btn-success:hover { background: rgba(74,222,128,0.15); }
+
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .status-bar .ok { color: var(--green-dim); }
+  .status-bar .err { color: var(--red); }
+  .status-bar .info { color: var(--amber); }
+
+  .search-wrap {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--amber-dim); }
+  .search-input::placeholder { color: var(--text3); }
+
+  .tree-controls {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .tree-container { padding: 8px 0; }
+
+  .tree-node {
+    user-select: none;
+  }
+
+  .tree-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 14px;
+    gap: 6px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.1s;
+    min-height: 28px;
+  }
+  .tree-row:hover { background: var(--surface3); }
+  .tree-row.selected { background: var(--amber-bg); }
+  .tree-row.selected:hover { background: var(--amber-bg2); }
+
+  .tree-indent { display: flex; flex-shrink: 0; }
+  .tree-indent-bar {
+    width: 18px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+  .tree-indent-bar::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+
+  .tree-toggle {
+    width: 16px; height: 16px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: var(--surface3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text3);
+    font-size: 9px;
+    transition: all 0.15s;
+  }
+  .tree-row:hover .tree-toggle { border-color: var(--amber-dim); color: var(--amber); }
+  .tree-toggle.expanded { background: var(--amber-bg); border-color: var(--amber-dim); color: var(--amber); }
+  .tree-toggle.leaf { background: transparent; border: none; color: var(--border2); }
+
+  .tree-check {
+    width: 15px; height: 15px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: var(--surface3);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    font-size: 9px;
+    color: transparent;
+  }
+  .tree-row.selected .tree-check {
+    background: var(--amber-bg2);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .tree-row.partial .tree-check {
+    background: var(--amber-bg);
+    border-color: var(--amber-dim);
+    color: var(--amber-dim);
+  }
+
+  .tree-key {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tree-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .type-string { color: var(--green); background: var(--green-bg); }
+  .type-number { color: var(--blue); background: var(--blue-bg); }
+  .type-boolean { color: var(--purple); background: rgba(167,139,250,0.1); }
+  .type-null { color: var(--muted); background: var(--surface3); }
+  .type-object { color: var(--amber); background: var(--amber-bg); }
+  .type-array { color: var(--amber); background: var(--amber-bg); }
+
+  .tree-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tree-children { }
+
+  .output-area {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #a3e635;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 16px;
+    resize: none;
+    caret-color: var(--amber);
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    color: var(--text3);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 28px;
+    opacity: 0.4;
+    font-family: var(--mono);
+    color: var(--amber-dim);
+    letter-spacing: -2px;
+  }
+
+  .empty-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text3);
+  }
+
+  .empty-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    line-height: 1.6;
+  }
+
+  .selection-summary {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .sel-count { color: var(--amber); font-weight: 600; }
+
+  .output-mode-bar {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  .mode-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text3);
+    transition: all 0.12s;
+  }
+  .mode-btn.active {
+    background: var(--amber-bg2);
+    border-color: var(--amber-dim);
+    color: var(--amber);
+  }
+  .mode-btn:not(.active):hover { background: var(--surface3); color: var(--text2); }
+
+  .copy-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    pointer-events: none;
+  }
+  .copy-toast.show { transform: translateY(0); opacity: 1; }
+
+  .path-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    padding: 2px 6px;
+    background: var(--surface3);
+    border-radius: 3px;
+    margin-left: auto;
+    flex-shrink: 0;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr 1fr; height: auto; min-height: calc(100vh - 61px); }
+    .panel { height: 400px; border-right: none; border-bottom: 1px solid var(--border); }
+    .panel:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">{}</div>
+    <div class="logo-text">JSON <span>Extractor</span></div>
+  </div>
+  <div class="header-actions">
+    <span class="badge">v1.0</span>
+    <button class="btn" id="btn-reset">↺ Reset</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Panel 1: Input -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="step-dot active">1</div>
+      <span class="panel-title">Paste JSON</span>
+      <span class="panel-badge" id="input-badge" style="display:none"></span>
+    </div>
+    <div class="panel-body" style="display:flex;flex-direction:column;">
+      <textarea class="input-area" id="json-input" spellcheck="false" placeholder='{
+  "paste": "your json here",
+  "or": {
+    "nested": true,
+    "arrays": [1, 2, 3]
+  }
+}'></textarea>
+    </div>
+    <div class="panel-footer">
+      <span class="status-bar" id="input-status">Waiting for JSON…</span>
+      <button class="btn" id="btn-clear-input">Clear</button>
+      <button class="btn-primary btn" id="btn-parse">Parse →</button>
+    </div>
+  </div>
+
+  <!-- Panel 2: Field Explorer -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="step-dot" id="step2">2</div>
+      <span class="panel-title">Select Fields</span>
+      <span class="panel-badge" id="field-badge" style="display:none"></span>
+    </div>
+    <div class="search-wrap" id="search-wrap" style="display:none">
+      <input class="search-input" id="search-input" placeholder="Filter keys…" type="text" />
+    </div>
+    <div class="tree-controls" id="tree-controls" style="display:none">
+      <button class="btn btn-ghost" id="btn-select-all">Select all</button>
+      <button class="btn btn-ghost" id="btn-deselect-all">Deselect all</button>
+      <button class="btn btn-ghost" id="btn-expand-all">Expand all</button>
+      <button class="btn btn-ghost" id="btn-collapse-all">Collapse</button>
+    </div>
+    <div class="selection-summary" id="sel-summary" style="display:none">
+      <span><span class="sel-count" id="sel-count">0</span> fields selected</span>
+      <span><span class="sel-count" id="total-count">0</span> total</span>
+    </div>
+    <div class="panel-body" id="tree-panel">
+      <div class="empty-state">
+        <div class="empty-icon">{ }</div>
+        <div class="empty-title">No JSON parsed yet</div>
+        <div class="empty-sub">Paste your JSON in panel 1<br>and hit Parse</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Output -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="step-dot" id="step3">3</div>
+      <span class="panel-title">Extracted Output</span>
+      <span class="panel-badge" id="output-badge" style="display:none"></span>
+    </div>
+    <div class="output-mode-bar" id="output-mode-bar" style="display:none">
+      <button class="mode-btn active" data-mode="json">JSON</button>
+      <button class="mode-btn" data-mode="flat">Flat</button>
+      <button class="mode-btn" data-mode="csv">CSV</button>
+    </div>
+    <div class="panel-body" id="output-panel" style="display:flex;flex-direction:column;">
+      <div class="empty-state">
+        <div class="empty-icon">→</div>
+        <div class="empty-title">Nothing extracted yet</div>
+        <div class="empty-sub">Select fields in panel 2<br>to see the output here</div>
+      </div>
+    </div>
+    <div class="panel-footer" id="output-footer" style="display:none">
+      <span class="status-bar" id="output-status"></span>
+      <button class="btn" id="btn-copy-path">Copy paths</button>
+      <button class="btn-success btn" id="btn-copy">Copy JSON</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="copy-toast" id="copy-toast">✓ Copied to clipboard</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let parsedJson = null;
+let selectedPaths = new Set();
+let expandedNodes = new Set();
+let outputMode = 'json';
+let totalLeafCount = 0;
+let filterText = '';
+
+const jsonInput = $('json-input');
+const treePanel = $('tree-panel');
+const outputPanel = $('output-panel');
+
+function showToast(msg = '✓ Copied to clipboard') {
+  const t = $('copy-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function getType(val) {
+  if (val === null) return 'null';
+  if (Array.isArray(val)) return 'array';
+  return typeof val;
+}
+
+function getTypeLabel(val) {
+  const t = getType(val);
+  if (t === 'object') return `{} obj`;
+  if (t === 'array') return `[] ${val.length}`;
+  return t;
+}
+
+function getTypeClass(val) {
+  const t = getType(val);
+  return `type-${t}`;
+}
+
+function formatPreview(val) {
+  const t = getType(val);
+  if (t === 'string') return `"${val.substring(0,20)}${val.length>20?'…':''}"`;
+  if (t === 'object') return `{${Object.keys(val).length} keys}`;
+  if (t === 'array') return `[${val.length}]`;
+  if (t === 'null') return 'null';
+  return String(val);
+}
+
+function getAllLeafPaths(obj, prefix = '') {
+  const paths = [];
+  if (getType(obj) === 'object' || getType(obj) === 'array') {
+    const keys = getType(obj) === 'array' ? [...obj.keys()] : Object.keys(obj);
+    for (const k of keys) {
+      const path = prefix ? `${prefix}.${k}` : String(k);
+      const child = obj[k];
+      const ct = getType(child);
+      if (ct === 'object' || ct === 'array') {
+        paths.push(...getAllLeafPaths(child, path));
+      } else {
+        paths.push(path);
+      }
+    }
+  } else {
+    paths.push(prefix);
+  }
+  return paths;
+}
+
+function getAllPaths(obj, prefix = '') {
+  const paths = [];
+  if (getType(obj) === 'object' || getType(obj) === 'array') {
+    const keys = getType(obj) === 'array' ? [...obj.keys()] : Object.keys(obj);
+    for (const k of keys) {
+      const path = prefix ? `${prefix}.${k}` : String(k);
+      paths.push(path);
+      const child = obj[k];
+      const ct = getType(child);
+      if (ct === 'object' || ct === 'array') {
+        paths.push(...getAllPaths(child, path));
+      }
+    }
+  }
+  return paths;
+}
+
+function getValueAtPath(obj, path) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null) return undefined;
+    cur = cur[p];
+  }
+  return cur;
+}
+
+function setValueAtPath(obj, path, value) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    if (!(p in cur)) {
+      const nextIsNum = /^\d+$/.test(parts[i+1]);
+      cur[p] = nextIsNum ? [] : {};
+    }
+    cur = cur[p];
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+function getChildPaths(obj, prefix) {
+  const val = prefix ? getValueAtPath(obj, prefix) : obj;
+  if (!val || (getType(val) !== 'object' && getType(val) !== 'array')) return [];
+  const keys = getType(val) === 'array' ? [...val.keys()] : Object.keys(val);
+  return keys.map(k => prefix ? `${prefix}.${k}` : String(k));
+}
+
+function getAllDescendantLeafPaths(obj, prefix) {
+  const val = prefix ? getValueAtPath(obj, prefix) : obj;
+  return getAllLeafPaths(val, prefix).map(p => {
+    if (prefix && p.startsWith(prefix + '.')) return p;
+    if (!prefix) return p;
+    return p;
+  });
+}
+
+function isSelected(path) { return selectedPaths.has(path); }
+
+function isPartiallySelected(path) {
+  const leaves = getAllDescendantLeafPaths(parsedJson, path);
+  if (leaves.length === 0) return false;
+  const selCount = leaves.filter(l => selectedPaths.has(l)).length;
+  return selCount > 0 && selCount < leaves.length;
+}
+
+function isFullySelected(path) {
+  const leaves = getAllDescendantLeafPaths(parsedJson, path);
+  if (leaves.length === 0) return false;
+  return leaves.every(l => selectedPaths.has(l));
+}
+
+function togglePath(path, val) {
+  const t = getType(getValueAtPath(parsedJson, path));
+  if (t === 'object' || t === 'array') {
+    const leaves = getAllDescendantLeafPaths(parsedJson, path);
+    if (val) leaves.forEach(l => selectedPaths.add(l));
+    else leaves.forEach(l => selectedPaths.delete(l));
+  } else {
+    if (val) selectedPaths.add(path);
+    else selectedPaths.delete(path);
+  }
+}
+
+function buildTree(obj, prefix, depth) {
+  const t = getType(obj);
+  const keys = t === 'array' ? [...obj.keys()] : (t === 'object' ? Object.keys(obj) : []);
+  const frag = document.createDocumentFragment();
+
+  for (const k of keys) {
+    const path = prefix ? `${prefix}.${k}` : String(k);
+    const val = obj[k];
+    const vt = getType(val);
+    const isContainer = vt === 'object' || vt === 'array';
+
+    if (filterText) {
+      const pathLower = path.toLowerCase();
+      const keyLower = String(k).toLowerCase();
+      const filter = filterText.toLowerCase();
+      if (!pathLower.includes(filter) && !keyLower.includes(filter)) continue;
+    }
+
+    const nodeEl = document.createElement('div');
+    nodeEl.className = 'tree-node';
+    nodeEl.dataset.path = path;
+
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+
+    const indent = document.createElement('div');
+    indent.className = 'tree-indent';
+    for (let i = 0; i < depth; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'tree-indent-bar';
+      indent.appendChild(bar);
+    }
+
+    const toggle = document.createElement('div');
+    toggle.className = 'tree-toggle' + (isContainer ? (expandedNodes.has(path) ? ' expanded' : '') : ' leaf');
+    toggle.textContent = isContainer ? (expandedNodes.has(path) ? '−' : '+') : '·';
+
+    const check = document.createElement('div');
+    check.className = 'tree-check';
+    check.textContent = isContainer
+      ? (isFullySelected(path) ? '✓' : (isPartiallySelected(path) ? '−' : ''))
+      : (isSelected(path) ? '✓' : '');
+
+    const keyEl = document.createElement('div');
+    keyEl.className = 'tree-key';
+    keyEl.textContent = String(k);
+
+    const typeEl = document.createElement('div');
+    typeEl.className = 'tree-type ' + getTypeClass(val);
+    typeEl.textContent = getTypeLabel(val);
+
+    if (isContainer) {
+      if (isFullySelected(path)) row.classList.add('selected');
+      else if (isPartiallySelected(path)) row.classList.add('partial');
+    } else {
+      if (isSelected(path)) row.classList.add('selected');
+    }
+
+    row.appendChild(indent);
+    row.appendChild(toggle);
+    row.appendChild(check);
+    row.appendChild(keyEl);
+    row.appendChild(typeEl);
+
+    if (!isContainer) {
+      const valEl = document.createElement('div');
+      valEl.className = 'tree-val';
+      valEl.textContent = formatPreview(val);
+      row.appendChild(valEl);
+    }
+
+    nodeEl.appendChild(row);
+
+    if (isContainer && expandedNodes.has(path)) {
+      const children = document.createElement('div');
+      children.className = 'tree-children';
+      children.appendChild(buildTree(val, path, depth + 1));
+      nodeEl.appendChild(children);
+    }
+
+    row.addEventListener('click', (e) => {
+      if (isContainer) {
+        if (expandedNodes.has(path)) expandedNodes.delete(path);
+        else expandedNodes.add(path);
+      }
+      const curSel = isContainer ? isFullySelected(path) : isSelected(path);
+      togglePath(path, !curSel);
+      renderTree();
+      updateOutput();
+    });
+
+    frag.appendChild(nodeEl);
+  }
+  return frag;
+}
+
+function renderTree() {
+  if (!parsedJson) return;
+  const container = document.createElement('div');
+  container.className = 'tree-container';
+  container.appendChild(buildTree(parsedJson, '', 0));
+  treePanel.innerHTML = '';
+  treePanel.appendChild(container);
+
+  const allLeaves = getAllLeafPaths(parsedJson, '');
+  totalLeafCount = allLeaves.length;
+  const selCount = allLeaves.filter(p => selectedPaths.has(p)).length;
+  $('sel-count').textContent = selCount;
+  $('total-count').textContent = totalLeafCount;
+}
+
+function buildExtracted() {
+  if (selectedPaths.size === 0) return null;
+  const result = {};
+  for (const path of selectedPaths) {
+    const val = getValueAtPath(parsedJson, path);
+    if (val === undefined) continue;
+    setValueAtPath(result, path, val);
+  }
+  return result;
+}
+
+function flattenObj(obj, prefix = '') {
+  const lines = [];
+  for (const k of Object.keys(obj)) {
+    const path = prefix ? `${prefix}.${k}` : k;
+    const v = obj[k];
+    const t = getType(v);
+    if (t === 'object' || t === 'array') lines.push(...flattenObj(v, path));
+    else lines.push(`${path}: ${JSON.stringify(v)}`);
+  }
+  return lines;
+}
+
+function toCSV(obj) {
+  const leaves = getAllLeafPaths(obj, '');
+  const headers = leaves;
+  const vals = leaves.map(p => {
+    const v = getValueAtPath(obj, p);
+    const s = JSON.stringify(v) ?? '';
+    return s.includes(',') ? `"${s}"` : s;
+  });
+  return headers.join(',') + '\n' + vals.join(',');
+}
+
+function updateOutput() {
+  const extracted = buildExtracted();
+  const footer = $('output-footer');
+  const modeBar = $('output-mode-bar');
+  const badge = $('output-badge');
+
+  if (!extracted || Object.keys(extracted).length === 0) {
+    outputPanel.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">→</div>
+      <div class="empty-title">No fields selected</div>
+      <div class="empty-sub">Tick some fields in panel 2</div>
+    </div>`;
+    footer.style.display = 'none';
+    modeBar.style.display = 'none';
+    badge.style.display = 'none';
+    $('step3').classList.remove('active');
+    return;
+  }
+
+  modeBar.style.display = 'flex';
+  footer.style.display = 'flex';
+  badge.style.display = '';
+  $('step3').classList.add('active');
+
+  let content = '';
+  if (outputMode === 'json') {
+    content = JSON.stringify(extracted, null, 2);
+    badge.textContent = `${selectedPaths.size} fields`;
+  } else if (outputMode === 'flat') {
+    content = flattenObj(extracted).join('\n');
+    badge.textContent = 'flat';
+  } else if (outputMode === 'csv') {
+    content = toCSV(extracted);
+    badge.textContent = 'csv';
+  }
+
+  const ta = document.createElement('textarea');
+  ta.className = 'output-area';
+  ta.readOnly = true;
+  ta.value = content;
+  ta.spellcheck = false;
+  outputPanel.innerHTML = '';
+  outputPanel.appendChild(ta);
+
+  $('output-status').innerHTML = `<span class="ok">✓</span> ${selectedPaths.size} fields selected`;
+
+  $('btn-copy').onclick = () => {
+    navigator.clipboard.writeText(content).then(() => showToast('✓ Copied!'));
+  };
+}
+
+function tryParse() {
+  const raw = jsonInput.value.trim();
+  if (!raw) {
+    $('input-status').innerHTML = '<span class="err">× Empty input</span>';
+    return;
+  }
+  try {
+    parsedJson = JSON.parse(raw);
+    selectedPaths = new Set();
+    expandedNodes = new Set();
+
+    const allKeys = Object.keys(getType(parsedJson) === 'object' ? parsedJson : {});
+    allKeys.slice(0, 3).forEach(k => expandedNodes.add(k));
+
+    $('input-status').innerHTML = `<span class="ok">✓</span> Valid JSON`;
+    const allLeaves = getAllLeafPaths(parsedJson, '');
+    $('input-badge').textContent = `${allLeaves.length} fields`;
+    $('input-badge').style.display = '';
+    $('step2').classList.add('active');
+    $('search-wrap').style.display = '';
+    $('tree-controls').style.display = 'flex';
+    $('sel-summary').style.display = 'flex';
+    renderTree();
+    updateOutput();
+  } catch(e) {
+    parsedJson = null;
+    $('input-status').innerHTML = `<span class="err">× ${e.message.slice(0,60)}</span>`;
+    $('input-badge').style.display = 'none';
+    treePanel.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">!</div>
+      <div class="empty-title">Invalid JSON</div>
+      <div class="empty-sub">${e.message.slice(0,80)}</div>
+    </div>`;
+    $('search-wrap').style.display = 'none';
+    $('tree-controls').style.display = 'none';
+    $('sel-summary').style.display = 'none';
+  }
+}
+
+$('btn-parse').addEventListener('click', tryParse);
+jsonInput.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') tryParse();
+});
+
+$('btn-clear-input').addEventListener('click', () => {
+  jsonInput.value = '';
+  parsedJson = null;
+  selectedPaths = new Set();
+  $('input-status').textContent = 'Waiting for JSON…';
+  $('input-badge').style.display = 'none';
+  $('search-wrap').style.display = 'none';
+  $('tree-controls').style.display = 'none';
+  $('sel-summary').style.display = 'none';
+  $('step2').classList.remove('active');
+  $('step3').classList.remove('active');
+  treePanel.innerHTML = `<div class="empty-state">
+    <div class="empty-icon">{ }</div>
+    <div class="empty-title">No JSON parsed yet</div>
+    <div class="empty-sub">Paste your JSON in panel 1<br>and hit Parse</div>
+  </div>`;
+  outputPanel.innerHTML = `<div class="empty-state">
+    <div class="empty-icon">→</div>
+    <div class="empty-title">Nothing extracted yet</div>
+    <div class="empty-sub">Select fields in panel 2<br>to see the output here</div>
+  </div>`;
+  $('output-footer').style.display = 'none';
+  $('output-mode-bar').style.display = 'none';
+  $('output-badge').style.display = 'none';
+});
+
+$('btn-reset').addEventListener('click', () => $('btn-clear-input').click());
+
+$('btn-select-all').addEventListener('click', () => {
+  if (!parsedJson) return;
+  getAllLeafPaths(parsedJson, '').forEach(p => selectedPaths.add(p));
+  renderTree();
+  updateOutput();
+});
+
+$('btn-deselect-all').addEventListener('click', () => {
+  selectedPaths.clear();
+  renderTree();
+  updateOutput();
+});
+
+$('btn-expand-all').addEventListener('click', () => {
+  if (!parsedJson) return;
+  getAllPaths(parsedJson, '').forEach(p => {
+    const v = getValueAtPath(parsedJson, p);
+    const t = getType(v);
+    if (t === 'object' || t === 'array') expandedNodes.add(p);
+  });
+  renderTree();
+});
+
+$('btn-collapse-all').addEventListener('click', () => {
+  expandedNodes.clear();
+  renderTree();
+});
+
+$('search-input').addEventListener('input', e => {
+  filterText = e.target.value;
+  if (filterText) {
+    getAllPaths(parsedJson, '').forEach(p => expandedNodes.add(p));
+  }
+  renderTree();
+});
+
+$('btn-copy-path').addEventListener('click', () => {
+  const paths = [...selectedPaths].join('\n');
+  navigator.clipboard.writeText(paths).then(() => showToast('✓ Paths copied!'));
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    outputMode = btn.dataset.mode;
+    $('btn-copy').textContent = outputMode === 'csv' ? 'Copy CSV' : outputMode === 'flat' ? 'Copy flat' : 'Copy JSON';
+    updateOutput();
+  });
+});
+
+jsonInput.addEventListener('paste', () => {
+  setTimeout(tryParse, 50);
+});
+</script>
+</body>
+</html>
